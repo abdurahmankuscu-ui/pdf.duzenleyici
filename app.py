@@ -18,6 +18,7 @@ from text_dialog import ReplaceTextDialog
 from tool_ui import ToolsMixin
 from security_ui import SecurityMixin
 from editing_ui import EditingMixin
+from workflow_ui import WorkflowMixin
 
 
 class Canvas(QGraphicsView):
@@ -166,7 +167,7 @@ class Canvas(QGraphicsView):
         super().keyPressEvent(event)
 
 
-class Window(SecurityMixin, EditingMixin, ToolsMixin, QMainWindow):
+class Window(SecurityMixin, EditingMixin, WorkflowMixin, ToolsMixin, QMainWindow):
     def __init__(self):
         super().__init__()
         self.editor = Editor()
@@ -180,6 +181,7 @@ class Window(SecurityMixin, EditingMixin, ToolsMixin, QMainWindow):
         self.build_ui()
         self.setup_tools()
         self.setup_editing()
+        self.setup_workflow()
         self.refresh()
 
     def guarded(self, fn):
@@ -236,7 +238,10 @@ class Window(SecurityMixin, EditingMixin, ToolsMixin, QMainWindow):
             QMessageBox.StandardButton.Save | QMessageBox.StandardButton.Discard | QMessageBox.StandardButton.Cancel)
         if answer == QMessageBox.StandardButton.Save:
             return self.save()
-        return answer == QMessageBox.StandardButton.Discard
+        if answer == QMessageBox.StandardButton.Discard:
+            self.discard_recovery()
+            return True
+        return False
 
     def new(self):
         if self.unsaved():
@@ -259,6 +264,7 @@ class Window(SecurityMixin, EditingMixin, ToolsMixin, QMainWindow):
             if not ok:
                 return
         self.editor.open(path, password)
+        self.session.add_recent(path)
         self.page = 0
         self.refresh()
         if self.editor.signed:
@@ -283,7 +289,10 @@ class Window(SecurityMixin, EditingMixin, ToolsMixin, QMainWindow):
         path = self.output_path() if different or not self.editor.path else self.editor.path
         if not path:
             return False
+        # The recovery slot follows the current path, so drop it before a Save As.
+        self.discard_recovery()
         self.editor.save(path)
+        self.session.add_recent(path)
         self.refresh(False)
         self.statusBar().showMessage(f'Kaydedildi: {path}')
         return True
@@ -585,6 +594,7 @@ class Window(SecurityMixin, EditingMixin, ToolsMixin, QMainWindow):
     def closeEvent(self, event):
         try:
             if self.unsaved():
+                self.discard_recovery()
                 event.accept()
             else:
                 event.ignore()
@@ -618,4 +628,7 @@ if __name__ == '__main__':
         QTimer.singleShot(300, smoke)
     elif len(sys.argv) > 1:
         window.guarded(lambda: window.open(sys.argv[1]))()
+    else:
+        from PySide6.QtCore import QTimer
+        QTimer.singleShot(0, window.guarded(window.check_recovery))
     sys.exit(app.exec())

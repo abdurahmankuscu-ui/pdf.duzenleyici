@@ -31,7 +31,7 @@ class ToolsMixin:
         menus = [
             ('PDF düzenle', [('PDF birleştir', self.merge, True), ('PDF ayır / sayfaları ayıkla', self.split, True),
                 ('Sayfaları kaldır', self.remove_pages, True), ('PDF düzenle', lambda: self.set_mode('Metin ekle'), True),
-                ("PDF’e tara", self.scan, False), ('Yazdır', self.print_pdf, True)]),
+                ("PDF’e tara", self.scan, False), ('Toplu işlem (klasör)', self.batch_dialog, False), ('Yazdır', self.print_pdf, True)]),
             ("PDF’i iyileştir", [('PDF küçültme', self.compress, True), ("PDF’i onar", self.repair, False), ('OCR PDF', self.ocr, True)]),
             ("PDF’e dönüştür", [('JPG / PNG → PDF', self.from_images, False), ('Word → PDF', lambda: self.from_office('Word'), False),
                 ('PowerPoint → PDF', lambda: self.from_office('PowerPoint'), False), ('Excel → PDF', lambda: self.from_office('Excel'), False),
@@ -40,6 +40,7 @@ class ToolsMixin:
                 ('PDF → PowerPoint', lambda: self.convert('PowerPoint'), True), ('PDF → Excel', lambda: self.convert('Excel'), True),
                 ('PDF → PDF/A', self.to_pdfa, True), ('PDF → Markdown', lambda: self.convert('Markdown'), True)]),
             ('Sayfa araçları', [("PDF’i döndür", self.rotate, True), ('Sayfa numarası ekle', self.numbers, True),
+                ('Üstbilgi / altbilgi / Bates', self.stamp_dialog, True),
                 ('Filigran ekle', self.watermark, True), ('PDF kırpma', lambda: self.set_mode('Kırp'), True),
                 ('PDF formları: doldur', self.form, True), ('PDF formları: alan ekle', lambda: self.set_mode('Form alanı'), True),
                 ('PDF formları: düzleştir', self.flatten_document_forms, True), ('Yer imleri', self.edit_bookmarks, True),
@@ -178,13 +179,7 @@ class ToolsMixin:
             self.background('JPG aktarımı', operation, lambda p: self.statusBar().showMessage(f'JPG dosyaları: {p}'))
 
     def numbers(self):
-        start, ok = QInputDialog.getInt(self, 'Sayfa numaraları', 'Başlangıç numarası:', 1, 0, 100000)
-        if ok:
-            def operation(doc):
-                for n, page in enumerate(doc):
-                    r = page.rect * page.derotation_matrix
-                    add_text(page, fitz.Rect(r.x0+20, r.y1-35, r.x1-20, r.y1-5), f'{start+n}', 11)
-            self.change(operation)
+        self.stamp_dialog('{n}', 'Alt orta')
 
     def watermark(self):
         text, ok = QInputDialog.getText(self, 'Filigran', 'Tüm sayfalara eklenecek metin:')

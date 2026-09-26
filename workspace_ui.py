@@ -167,6 +167,7 @@ def build_workspace(w, Canvas):
     row.addWidget(tool(w.action(root,'Yeni belge',w.new,'Ctrl+N',False),glyph='plus'))
     row.addWidget(tool(w.action(root,'Kaydet',w.save,'Ctrl+S'),'primary','save','white'))
     file_menu = QMenu(w)
+    w.file_menu = file_menu
     w.action(file_menu,'Farklı kaydet',lambda:w.save(True),'Ctrl+Shift+S')
     w.action(file_menu,'Yazdır',w.print_pdf,'Ctrl+P')
     more = QToolButton()
