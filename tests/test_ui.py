@@ -71,3 +71,73 @@ def test_ui_security_actions(tmp_path, monkeypatch):
         assert doc.needs_pass
     window.editor.dirty = False
     window.close()
+
+
+def test_ui_auto_redaction_preview(monkeypatch):
+    import security_ui
+    from test_security import sample_doc, valid_tckn
+    app = QApplication.instance() or QApplication([])
+    window = Window()
+    window.editor.new()
+    window.editor.doc.insert_pdf(sample_doc())
+    window.refresh()
+    seen = {}
+    def accept(dialog):
+        seen['items'] = dialog.list.count()
+        # Untick the e-mail hit: the user may keep some findings.
+        for i in range(dialog.list.count()):
+            if dialog.list.item(i).data(256)['kind'] == 'E-posta':
+                dialog.list.item(i).setCheckState(Qt.CheckState.Unchecked)
+        return True
+    monkeypatch.setattr(security_ui.RedactionDialog, 'exec', accept)
+    window.auto_redact()
+    assert seen['items'] >= 4
+    text = ''.join(p.get_text() for p in window.editor.doc)
+    assert valid_tckn() not in text and 'deniz.yilmaz@example.com' in text
+    window.undo()
+    assert valid_tckn() in ''.join(p.get_text() for p in window.editor.doc)
+    window.editor.dirty = False
+    window.close()
+
+
+def test_ui_digital_sign_and_verify(tmp_path, monkeypatch):
+    import security_ui
+    from test_security import make_pfx
+    from PySide6.QtWidgets import QFileDialog, QMessageBox
+    pfx = make_pfx(tmp_path)
+    app = QApplication.instance() or QApplication([])
+    window = Window()
+    window.new()
+    output = tmp_path / 'imzali.pdf'
+    monkeypatch.setattr(security_ui.SignDialog, 'exec', lambda self: True)
+    monkeypatch.setattr(security_ui.SignDialog, 'values',
+                        lambda self: dict(pfx=str(pfx), pfx_password='sifre', reason='Onay', location='Ankara'))
+    monkeypatch.setattr(QFileDialog, 'getSaveFileName', lambda *a, **k: (str(output), ''))
+    monkeypatch.setattr(QMessageBox, 'question', lambda *a, **k: QMessageBox.StandardButton.No)
+    window.digital_sign(0, fitz.Rect(300, 700, 500, 760))
+    from signing import verify_signatures
+    assert verify_signatures(output.read_bytes())[0]['intact']
+    reports = []
+    monkeypatch.setattr(window, 'result_text', lambda title, text: reports.append(text))
+    monkeypatch.setattr(QFileDialog, 'getOpenFileName', lambda *a, **k: (str(output), ''))
+    window.verify_document_signatures()
+    assert 'GEÇERLİ' in reports[0]
+    window.editor.dirty = False
+    window.close()
+
+
+def test_ui_saving_signed_pdf_asks_first(tmp_path, monkeypatch):
+    from PySide6.QtWidgets import QMessageBox
+    app = QApplication.instance() or QApplication([])
+    window = Window()
+    window.new()
+    path = tmp_path / 'a.pdf'
+    window.editor.save(path)
+    window.editor.signed = True
+    asked = []
+    monkeypatch.setattr(QMessageBox, 'question', lambda *a, **k: asked.append(a[2]) or QMessageBox.StandardButton.No)
+    before = path.read_bytes()
+    assert window.save() is False
+    assert asked and 'imza' in asked[0].lower() and path.read_bytes() == before
+    window.editor.dirty = False
+    window.close()

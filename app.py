@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
 from engine import Editor, add_text, erase, extract, page_range, replacement_style, replace_text, move_text
 from text_dialog import ReplaceTextDialog
 from tool_ui import ToolsMixin
+from security_ui import SecurityMixin
 
 
 class Canvas(QGraphicsView):
@@ -136,7 +137,7 @@ class Canvas(QGraphicsView):
         super().keyPressEvent(event)
 
 
-class Window(ToolsMixin, QMainWindow):
+class Window(SecurityMixin, ToolsMixin, QMainWindow):
     def __init__(self):
         super().__init__()
         self.editor = Editor()
@@ -227,7 +228,9 @@ class Window(ToolsMixin, QMainWindow):
         self.editor.open(path, password)
         self.page = 0
         self.refresh()
-        if encrypted:
+        if self.editor.signed:
+            self.statusBar().showMessage('Belge dijital imzalı. Doğrulamak için PDF güvenliği > İmzaları doğrula. Kaydetmek imzaları geçersiz kılar.')
+        elif encrypted:
             self.statusBar().showMessage('Parolalı PDF açıldı. Kayıtlarda aynı parola korunur; kaldırmak için PDF güvenliği > Parolasız kaydet.')
 
     def output_path(self, title='PDF kaydet'):
@@ -238,6 +241,12 @@ class Window(ToolsMixin, QMainWindow):
     def save(self, different=False):
         if not self.editor.doc:
             return False
+        if self.editor.signed:
+            answer = QMessageBox.question(self, 'İmzalı belge',
+                'Bu belgede dijital imza var. Kaydetmek belgeyi yeniden yazar ve mevcut imzaları GEÇERSİZ kılar.\n\n'
+                'Yine de kaydedilsin mi?')
+            if answer != QMessageBox.StandardButton.Yes:
+                return False
         path = self.output_path() if different or not self.editor.path else self.editor.path
         if not path:
             return False
@@ -344,6 +353,8 @@ class Window(ToolsMixin, QMainWindow):
                 if dialog.exec():
                     self.refresh()
                     self.statusBar().showMessage('Resim boyutlandırıldı. Ctrl+Z ile geri alabilirsiniz.')
+            elif mode == 'Dijital imza':
+                self.digital_sign(self.page, rect)
             elif mode == 'Yazı stili al':
                 self.text_style = replacement_style(page, rect)
                 self.size.setValue(round(self.text_style['size']))

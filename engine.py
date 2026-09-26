@@ -39,6 +39,8 @@ class Editor:
         self.dirty = False
         # Password of an opened protected PDF; saves keep it unless changed explicitly.
         self.password = None
+        # Opened file carries digital signatures; a normal save invalidates them.
+        self.signed = False
 
     def open(self, path, password=''):
         doc = fitz.open(path)
@@ -51,12 +53,14 @@ class Editor:
         if not doc.is_pdf or not len(doc):
             doc.close()
             raise ValueError('Geçerli, en az bir sayfalı bir PDF seçin.')
+        signed = doc.get_sigflags() > 0
         # Detach from the source file so replacing it is safe on Windows.
         data = doc.tobytes()
         doc.close()
         self._replace(data)
         self.path = str(path)
         self.password = password if protected else None
+        self.signed = signed
         self.undo_stack.clear()
         self.redo_stack.clear()
         self.dirty = False
@@ -73,6 +77,7 @@ class Editor:
         self.doc.new_page()
         self.path = None
         self.password = None
+        self.signed = False
         self.undo_stack.clear()
         self.redo_stack.clear()
         self.dirty = True

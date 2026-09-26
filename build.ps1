@@ -9,7 +9,7 @@ if (-not $packageDirectory.StartsWith($expectedDist, [System.StringComparison]::
 if (Test-Path -LiteralPath $packageDirectory) {
     Get-ChildItem -LiteralPath $packageDirectory -Recurse -File | Where-Object IsReadOnly | ForEach-Object { $_.IsReadOnly = $false }
 }
-& .\.venv\Scripts\python.exe -m PyInstaller --noconfirm --windowed --distpath $outputRoot --name 'PDF Studyo' --collect-all pymupdf --hidden-import win32com.client --hidden-import pythoncom --add-data 'runtime/tessdata;runtime/tessdata' app.py
+& .\.venv\Scripts\python.exe -m PyInstaller --noconfirm --windowed --distpath $outputRoot --name 'PDF Studyo' --collect-all pymupdf --hidden-import win32com.client --hidden-import pythoncom --collect-submodules pyhanko --collect-submodules pyhanko_certvalidator --add-data 'runtime/tessdata;runtime/tessdata' app.py
 if ($LASTEXITCODE -ne 0) { throw 'Paketleme başarısız.' }
 # Qt uses Windows ICU. A different ICU on PATH (e.g. from another application)
 # can be picked up by PyInstaller and produces a missing-entry-point error.
