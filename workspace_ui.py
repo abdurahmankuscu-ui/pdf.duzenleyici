@@ -32,6 +32,11 @@ PATHS = {
     'chevron': '<path d="M9 5l7 7-7 7"/>',
     'pages': '<rect x="7" y="3" width="14" height="17" rx="2"/><path d="M3 7v15h14"/>',
     'fit': '<path d="M3 9V3h6 M15 3h6v6 M21 15v6h-6 M9 21H3v-6"/>',
+    'pen': '<path d="M3 17c3-6 5 2 8-3s4-7 7-4 M16 4l4 4"/>',
+    'line': '<path d="M4 20L20 4"/>',
+    'arrow': '<path d="M4 20L20 4 M11 4h9v9"/>',
+    'circle': '<circle cx="12" cy="12" r="8"/>',
+    'link': '<path d="M10 14a4 4 0 0 0 5.6 0l3-3a4 4 0 0 0-5.6-5.6l-1 1 M14 10a4 4 0 0 0-5.6 0l-3 3a4 4 0 0 0 5.6 5.6l1-1"/>',
 }
 
 
@@ -179,7 +184,8 @@ def build_workspace(w, Canvas):
     w.mode_actions = {}
     modes = [('Gezin','cursor'),('Metni değiştir','edit'),('Metin ekle','text'),('Metni taşı','move'),
              ('Yazı stili al','style'),('İçeriği sil','erase'),('Resim ekle','image'),
-             ('Resmi boyutlandır','fit'),('Vurgula','mark'),('Dikdörtgen','rect'),('Not ekle','note'),('Kırp','crop')]
+             ('Resmi boyutlandır','fit'),('Vurgula','mark'),('Serbest çizim','pen'),('Çizgi','line'),('Ok','arrow'),
+             ('Dikdörtgen','rect'),('Daire','circle'),('Not ekle','note'),('Bağlantı ekle','link'),('Kırp','crop')]
     for mode, glyph in modes:
         action = w.action(root,mode,lambda m=mode:w.set_mode(m))
         action.setCheckable(True)
@@ -222,6 +228,7 @@ def build_workspace(w, Canvas):
     docrow.addWidget(tool(w.undo_action,glyph='undo',text=False))
     docrow.addWidget(tool(w.redo_action,glyph='redo',text=False))
     edit_layout.addWidget(document_bar)
+    w.docrow = docrow
     properties, props = frame('properties',margins=(24,8,18,8),spacing=12)
     w.mode_label = label('Gezin','modeTitle')
     props.addWidget(w.mode_label)
@@ -247,6 +254,7 @@ def build_workspace(w, Canvas):
     props.addWidget(tool(w.action(root,'Genişliğe sığdır',w.fit_width),glyph='fit',text=False))
     edit_layout.addWidget(properties)
     content, content_row = frame('content')
+    w.content_row = content_row
     w.canvas = Canvas()
     w.canvas.selected.connect(w.edit_selection)
     w.canvas.moved.connect(w.move_selected_text)

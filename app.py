@@ -8,7 +8,7 @@ if '--smoke-test' in sys.argv or '--verify-integrations' in sys.argv or '--verif
     sys.excepthook = smoke_exception
 import pymupdf as fitz
 from PySide6.QtCore import Qt, QRectF, QPointF, Signal, QSize
-from PySide6.QtGui import QAction, QColor, QImage, QPixmap, QPen, QIcon, QKeySequence, QFontDatabase, QFont
+from PySide6.QtGui import QAction, QColor, QImage, QPixmap, QPen, QIcon, QKeySequence, QFontDatabase, QFont, QPainterPath
 from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QPushButton, QListWidget, QListWidgetItem, QGraphicsView, QGraphicsScene,
     QFileDialog, QInputDialog, QMessageBox, QToolBar, QSpinBox, QSplitter, QColorDialog,
@@ -17,11 +17,15 @@ from engine import Editor, add_text, erase, extract, page_range, replacement_sty
 from text_dialog import ReplaceTextDialog
 from tool_ui import ToolsMixin
 from security_ui import SecurityMixin
+from editing_ui import EditingMixin
 
 
 class Canvas(QGraphicsView):
     selected = Signal(object)
     moved = Signal(object, object)
+    # Freehand points and line endpoints, already in unscaled page coordinates.
+    stroked = Signal(object)
+    dragged = Signal(object, object)
 
     def __init__(self):
         super().__init__()
@@ -83,7 +87,13 @@ class Canvas(QGraphicsView):
         painter.restore()
 
     def mousePressEvent(self, event):
-        if self.mode != 'Gezin' and event.button() == Qt.MouseButton.LeftButton:
+        if self.mode in ('Serbest çizim', 'Çizgi', 'Ok') and event.button() == Qt.MouseButton.LeftButton:
+            self.origin = self.mapToScene(event.position().toPoint())
+            self.points = [self.origin]
+            pen = QPen(QColor('#087f72'), 2)
+            pen.setCosmetic(True)
+            self.box = self.scene().addPath(QPainterPath(self.origin), pen)
+        elif self.mode != 'Gezin' and event.button() == Qt.MouseButton.LeftButton:
             self.origin = self.mapToScene(event.position().toPoint())
             self.moving = self.mode == 'Metni taşı' and self.move_region is not None and self.move_region.contains(self.origin)
             box = self.move_region if self.moving else QRectF(self.origin, self.origin)
@@ -94,7 +104,14 @@ class Canvas(QGraphicsView):
             super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
-        if self.origin is not None:
+        if self.origin is not None and self.mode in ('Serbest çizim', 'Çizgi', 'Ok'):
+            point = self.mapToScene(event.position().toPoint())
+            self.points = self.points + [point] if self.mode == 'Serbest çizim' else [self.origin, point]
+            path = QPainterPath(self.points[0])
+            for p in self.points[1:]:
+                path.lineTo(p)
+            self.box.setPath(path)
+        elif self.origin is not None:
             point = self.mapToScene(event.position().toPoint())
             self.box.setRect(self.move_region.translated(point-self.origin) if self.moving else QRectF(self.origin, point).normalized())
             if self.moving:
@@ -103,7 +120,19 @@ class Canvas(QGraphicsView):
             super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event):
-        if self.origin is not None:
+        if self.origin is not None and self.mode in ('Serbest çizim', 'Çizgi', 'Ok'):
+            end = self.mapToScene(event.position().toPoint())
+            points = self.points if self.mode == 'Serbest çizim' else [self.origin, end]
+            if self.mode == 'Serbest çizim' and points[-1] != end:
+                points = points + [end]
+            self.scene().removeItem(self.box)
+            self.origin = self.box = None
+            page_points = [fitz.Point(p.x()/self.factor, p.y()/self.factor) for p in points]
+            if self.mode == 'Serbest çizim':
+                self.stroked.emit(page_points)
+            else:
+                self.dragged.emit(page_points[0], page_points[-1])
+        elif self.origin is not None:
             rect = self.box.rect() if self.moving else self.box.rect().intersected(self.sceneRect())
             self.scene().removeItem(self.box)
             self.guide_lines = []
@@ -137,7 +166,7 @@ class Canvas(QGraphicsView):
         super().keyPressEvent(event)
 
 
-class Window(SecurityMixin, ToolsMixin, QMainWindow):
+class Window(SecurityMixin, EditingMixin, ToolsMixin, QMainWindow):
     def __init__(self):
         super().__init__()
         self.editor = Editor()
@@ -150,6 +179,7 @@ class Window(SecurityMixin, ToolsMixin, QMainWindow):
         self.actions = []
         self.build_ui()
         self.setup_tools()
+        self.setup_editing()
         self.refresh()
 
     def guarded(self, fn):
@@ -184,6 +214,9 @@ class Window(SecurityMixin, ToolsMixin, QMainWindow):
         for name, action in self.mode_actions.items():
             action.setChecked(name == mode)
         self.canvas.setDragMode(QGraphicsView.DragMode.ScrollHandDrag if mode == 'Gezin' else QGraphicsView.DragMode.NoDrag)
+        if mode in ('Serbest çizim', 'Çizgi', 'Ok'):
+            self.statusBar().showMessage(f'{mode}: Sayfa üzerinde fareyi basılı tutup çizin. Renk için Renk düğmesini kullanın.')
+            return
         self.statusBar().showMessage('Resmi boyutlandır: Resmin ortasına tıklayın.' if mode == 'Resmi boyutlandır' else ('Sayfayı sürükleyerek gezinin.' if mode == 'Gezin' else f'{mode}: Sayfa üzerinde sürükleyerek bir alan seçin.'))
 
     def choose_color(self):
@@ -276,6 +309,8 @@ class Window(SecurityMixin, ToolsMixin, QMainWindow):
             self.thumbs.clear()
             for i in range(len(doc)):
                 item = QListWidgetItem(f'Sayfa {i+1}')
+                # Original index lets drag-and-drop compute the new page order.
+                item.setData(Qt.ItemDataRole.UserRole, i)
                 # Avoid rendering the entire document eagerly.
                 if abs(i - self.page) < 12:
                     pix = doc[i].get_pixmap(matrix=fitz.Matrix(0.18, 0.18), alpha=False)
@@ -284,6 +319,7 @@ class Window(SecurityMixin, ToolsMixin, QMainWindow):
             self.thumbs.setCurrentRow(self.page)
             self.thumbs.blockSignals(False)
         self.render()
+        self.refresh_comments()
 
     @staticmethod
     def pixmap(pix):
@@ -418,21 +454,11 @@ class Window(SecurityMixin, ToolsMixin, QMainWindow):
             elif mode == 'Kırp':
                 self.change(lambda doc: doc[self.page].set_cropbox(rect + (page.cropbox_position.x, page.cropbox_position.y, page.cropbox_position.x, page.cropbox_position.y)))
             elif mode == 'Form alanı':
-                name, ok = QInputDialog.getText(self, 'Yeni metin alanı', 'Benzersiz alan adı:')
-                if ok and name.strip():
-                    if any(w.field_name == name for p in self.editor.doc for w in (p.widgets() or [])):
-                        raise ValueError('Bu alan adı zaten kullanılıyor.')
-                    def operation(doc):
-                        widget = fitz.Widget()
-                        widget.field_name = name
-                        widget.field_type = fitz.PDF_WIDGET_TYPE_TEXT
-                        widget.rect = rect
-                        widget.field_value = ''
-                        widget.text_fontsize = self.size.value()
-                        widget.border_color = (0.45, 0.4, 0.8)
-                        widget.border_width = 1
-                        doc[self.page].add_widget(widget)
-                    self.change(operation)
+                self.add_form_field(rect)
+            elif mode == 'Daire':
+                self.draw_circle(rect)
+            elif mode == 'Bağlantı ekle':
+                self.add_link_at(rect)
         self.guarded(run)()
 
     def move_selected_text(self, source, destination):
@@ -461,7 +487,8 @@ class Window(SecurityMixin, ToolsMixin, QMainWindow):
         self.change(operation)
 
     def split(self):
-        value, ok = QInputDialog.getText(self, 'Sayfaları çıkar', 'Ayrı PDF olarak kaydedilecek sayfalar (ör. 1-3,5):', text=str(self.page + 1))
+        value, ok = QInputDialog.getText(self, 'Sayfaları çıkar', 'Ayrı PDF olarak kaydedilecek sayfalar (ör. 1-3,5):',
+            text=','.join(str(i + 1) for i in self.selected_pages()))
         if ok:
             indices = page_range(value, len(self.editor.doc))
             path = self.output_path('Seçili sayfaları kaydet')
@@ -485,12 +512,14 @@ class Window(SecurityMixin, ToolsMixin, QMainWindow):
                     f'Bellekteki belge: {sizes[0]/1024:.0f} KB\nÇıktı: {sizes[1]/1024:.0f} KB\nKazanç: %{100*(1-sizes[1]/sizes[0]):.1f}\n\nZaten sıkıştırılmış PDF’lerde boyut azalmayabilir.'))
 
     def rotate(self):
-        self.change(lambda doc: doc[self.page].set_rotation((doc[self.page].rotation + 90) % 360))
+        import pages
+        selected = self.selected_pages()
+        self.change(lambda doc: pages.rotate_pages(doc, selected))
 
     def delete_page(self):
-        if len(self.editor.doc) == 1:
-            raise ValueError('Belgede en az bir sayfa kalmalı.')
-        self.change(lambda doc: doc.delete_page(self.page))
+        import pages
+        selected = self.selected_pages()
+        self.change(lambda doc: pages.delete_pages(doc, selected))
 
     def blank(self):
         self.change(lambda doc: doc.new_page(pno=self.page + 1))
@@ -523,25 +552,6 @@ class Window(SecurityMixin, ToolsMixin, QMainWindow):
                 atomic_write(path, self.editor.doc.tobytes(garbage=4, deflate=True,
                     encryption=fitz.PDF_ENCRYPT_AES_256, owner_pw=password, user_pw=password))
                 self.statusBar().showMessage('Parolalı kopya kaydedildi.')
-
-    def form(self):
-        widgets = [w for w in self.editor.doc[self.page].widgets() or [] if w.field_type == fitz.PDF_WIDGET_TYPE_TEXT]
-        if not widgets:
-            QMessageBox.information(self, 'Form alanları', 'Bu sayfada doldurulabilir metin alanı yok. Metin ekle aracını kullanabilirsiniz.')
-            return
-        labels = [f'{i+1}: {w.field_label or w.field_name}' for i, w in enumerate(widgets)]
-        name, ok = QInputDialog.getItem(self, 'Form doldur', 'Alan:', labels, editable=False)
-        if ok:
-            w = widgets[labels.index(name)]
-            value, ok = QInputDialog.getText(self, name, 'Değer:', text=w.field_value or '')
-            if ok:
-                xref = w.xref
-                def operation(doc):
-                    page = doc[self.page]
-                    widget = page.load_widget(xref)
-                    widget.field_value = value
-                    widget.update()
-                self.change(operation)
 
     def find(self):
         query = self.search.text().strip()
