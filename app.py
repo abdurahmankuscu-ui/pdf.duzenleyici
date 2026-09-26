@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
 from engine import Editor, add_text, erase, extract, page_range, replacement_style, replace_text, move_text
 from text_dialog import ReplaceTextDialog
 from tool_ui import ToolsMixin
+from version import VERSION
 from security_ui import SecurityMixin
 from editing_ui import EditingMixin
 from workflow_ui import WorkflowMixin
@@ -304,7 +305,7 @@ class Window(SecurityMixin, EditingMixin, WorkflowMixin, ToolsMixin, QMainWindow
         self.undo_action.setEnabled(bool(self.editor.undo_stack))
         self.redo_action.setEnabled(bool(self.editor.redo_stack))
         title = Path(self.editor.path).name if self.editor.path else 'Yeni belge'
-        self.setWindowTitle(f'{"● " if self.editor.dirty else ""}{title} — PDF Stüdyo 2.3')
+        self.setWindowTitle(f'{"● " if self.editor.dirty else ""}{title} — PDF Stüdyo {VERSION}')
         self.workspace_stack.setCurrentIndex(0 if doc is None else 1)
         if doc is None:
             self.info.setText('Çalışma alanı')

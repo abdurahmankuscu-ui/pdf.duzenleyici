@@ -152,9 +152,55 @@ class WorkflowMixin:
         self.recent_menu = QMenu('Son açılanlar', self)
         self.recent_menu.aboutToShow.connect(self.rebuild_recent_menu)
         self.file_menu.insertMenu(self.file_menu.actions()[0], self.recent_menu)
+        from theme import THEMES
+        view = self.tools_menu.addMenu('Görünüm')
+        self.theme_actions = {}
+        for choice in THEMES:
+            action = view.addAction(f'Tema: {choice}')
+            action.setCheckable(True)
+            action.triggered.connect(lambda _=False, c=choice: self.set_theme(c))
+            self.theme_actions[choice] = action
+        help_menu = next(a.menu() for a in self.tools_menu.actions() if a.text() == 'Yardım')
+        self.action(help_menu, 'Güncellemeleri denetle', self.check_updates, needs=False)
+        self.apply_saved_theme()
         self.recovery_timer = QTimer(self)
         self.recovery_timer.timeout.connect(lambda: self.guarded(self.autosave_recovery)())
         self.recovery_timer.start(RECOVERY_INTERVAL_MS)
+
+    def set_theme(self, choice):
+        from theme import stylesheet
+        self.setStyleSheet(stylesheet(choice))
+        self.session.set_preference('theme', choice)
+        for name, action in getattr(self, 'theme_actions', {}).items():
+            action.setChecked(name == choice)
+
+    def apply_saved_theme(self):
+        from theme import stylesheet, THEMES
+        choice = self.session.preference('theme', 'Açık')
+        choice = choice if choice in THEMES else 'Açık'
+        self.setStyleSheet(stylesheet(choice))
+        for name, action in getattr(self, 'theme_actions', {}).items():
+            action.setChecked(name == choice)
+
+    def check_updates(self):
+        import updater
+        from version import VERSION
+        from PySide6.QtCore import QUrl
+        from PySide6.QtGui import QDesktopServices
+        result = []
+        self.background('Güncellemeler denetleniyor', lambda: updater.check_for_update(VERSION), result.append)
+        info = result[0]
+        if info['latest'] is None:
+            QMessageBox.information(self, 'Güncelleme', f'Henüz yayınlanmış bir sürüm yok. Kullandığınız sürüm: {VERSION}')
+            return
+        if not info['newer']:
+            QMessageBox.information(self, 'Güncelleme', f'En güncel sürümü kullanıyorsunuz ({VERSION}).')
+            return
+        answer = QMessageBox.question(self, 'Yeni sürüm var',
+            f"Yeni sürüm: {info['latest']} (kullandığınız: {VERSION}).\n\n"
+            'İndirme sayfası tarayıcıda açılsın mı? Dosyayı yalnızca bu proje sayfasından indirin.')
+        if answer == QMessageBox.StandardButton.Yes:
+            QDesktopServices.openUrl(QUrl(info['url']))
 
     def stamp_dialog(self, template='Sayfa {n} / {toplam}', position='Alt orta'):
         dialog = StampDialog(self, template, position)

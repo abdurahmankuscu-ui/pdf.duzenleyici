@@ -51,67 +51,6 @@ def icon(name, color='#526177'):
     return QIcon(pix)
 
 
-STYLE = '''
-QWidget { color:#243348; font-family:"Segoe UI"; font-size:13px; }
-QMainWindow, QDialog { background:#f4f6f8; }
-QFrame#header, QFrame#documentBar, QFrame#properties { background:white; border-bottom:1px solid #e5eaf0; }
-QFrame#sidebar { background:#172638; }
-QLabel#brand { color:#172638; font-size:21px; font-weight:700; }
-QLabel#version { color:#8190a2; font-size:11px; }
-QLabel#sideHeading { color:#7f93aa; font-size:10px; font-weight:600; letter-spacing:2px; }
-QLabel#sideFooter { color:#8295ac; font-size:11px; }
-QToolButton, QPushButton { background:white; border:1px solid #dfe5eb; border-radius:8px; padding:9px 14px; }
-QToolButton:hover, QPushButton:hover { background:#f0f5f7; border-color:#bac9d4; }
-QToolButton:pressed, QPushButton:pressed { background:#dfeeea; }
-QToolButton:disabled, QPushButton:disabled { color:#a6b0bd; background:#f7f8fa; border-color:#edf0f3; }
-QToolButton#primary, QPushButton#primary { background:#087f72; color:white; border:1px solid #087f72; font-weight:600; }
-QToolButton#primary:hover, QPushButton#primary:hover { background:#066a60; }
-QToolButton#primary:disabled { background:#e7efed; color:#9eafaa; border-color:#e7efed; }
-QToolButton#nav { background:transparent; color:#d4deea; border:0; border-radius:7px; text-align:left; padding:9px 12px; }
-QToolButton#nav:hover { background:#25384e; color:white; }
-QToolButton#nav:checked { background:#254a50; color:#88ead3; font-weight:600; }
-QToolButton#nav:disabled { color:#708095; background:transparent; }
-QToolButton#quiet { background:transparent; border:0; padding:7px; }
-QToolButton#quiet:hover { background:#eef3f6; }
-QToolButton::menu-indicator { width:0; }
-QFrame#pagePanel { background:#f8fafb; border-left:1px solid #e2e8ee; }
-QLabel#panelHeading { font-weight:600; font-size:12px; color:#526177; }
-QListWidget { background:transparent; border:0; outline:0; padding:8px; }
-QListWidget::item { padding:14px 6px; margin:4px 0; border:1px solid transparent; border-radius:8px; color:#69798d; }
-QListWidget::item:selected { background:#e1f2ed; border:1px solid #8bc5b7; color:#126b5a; }
-QListWidget::item:hover { background:#edf2f5; }
-QGraphicsView { background:#e9edf2; border:0; }
-QLineEdit, QSpinBox, QDoubleSpinBox, QTextEdit { background:white; border:1px solid #dce4eb; border-radius:7px; padding:7px; selection-background-color:#c5e8df; selection-color:#172638; }
-QLineEdit:focus, QTextEdit:focus { border-color:#4b9d8b; }
-QSpinBox, QDoubleSpinBox { padding-right:8px; }
-QLabel#documentTitle { font-weight:600; color:#344459; }
-QLabel#muted { color:#8190a2; font-size:12px; }
-QLabel#modeTitle { color:#087f72; font-weight:600; }
-QFrame#home { background:#f4f6f8; }
-QLabel#eyebrow { color:#087f72; font-weight:600; font-size:11px; letter-spacing:2px; }
-QLabel#heroTitle { font-size:38px; font-weight:600; color:#172638; }
-QLabel#heroBody { font-size:15px; color:#748195; }
-QFrame#hero { background:#e7f1ee; border:1px solid #d8e7e1; border-radius:18px; }
-QLabel#heroSmall { color:#577b70; font-size:12px; }
-QFrame#paper { background:white; border:1px solid #dce6e2; border-radius:8px; }
-QLabel#paperHeading { font-size:18px; font-weight:700; color:#263f40; }
-QPushButton#card { background:white; text-align:left; padding:23px; border:1px solid #e0e7ec; border-radius:12px; font-size:14px; }
-QPushButton#card:hover { border-color:#72b3a3; background:#f8fcfa; }
-QMenu { background:white; border:1px solid #dce3e9; padding:7px; }
-QMenu::item { padding:9px 30px 9px 14px; border-radius:5px; }
-QMenu::item:selected { background:#e3f2ed; color:#096b5a; }
-QMenu::item:disabled { color:#abb4bf; }
-QStatusBar { background:white; border-top:1px solid #e2e8ee; color:#758399; font-size:11px; padding:4px 12px; }
-QStatusBar::item { border:0; }
-QScrollBar:vertical { background:transparent; width:9px; margin:2px; }
-QScrollBar::handle:vertical { background:#bac7d2; border-radius:3px; min-height:30px; }
-QScrollBar:horizontal { background:transparent; height:9px; margin:2px; }
-QScrollBar::handle:horizontal { background:#bac7d2; border-radius:3px; min-width:30px; }
-QScrollBar::add-line, QScrollBar::sub-line { width:0; height:0; }
-QScrollBar::add-page, QScrollBar::sub-page { background:transparent; }
-QToolTip { background:#172638; color:white; border:0; padding:7px; }
-'''
-
 
 def label(text, name=None):
     widget = QLabel(text)
@@ -143,7 +82,8 @@ def tool(action, name='quiet', glyph=None, color='#526177', text=True):
 
 
 def build_workspace(w, Canvas):
-    w.setStyleSheet(STYLE)
+    from theme import stylesheet
+    w.setStyleSheet(stylesheet('Açık'))
     root = QWidget()
     outer = QVBoxLayout(root)
     outer.setContentsMargins(0,0,0,0)
@@ -153,7 +93,8 @@ def build_workspace(w, Canvas):
     logo.setPixmap(icon('file','#087f72').pixmap(30,30))
     row.addWidget(logo)
     row.addWidget(label('PDF Stüdyo','brand'))
-    row.addWidget(label('2.3','version'))
+    from version import VERSION
+    row.addWidget(label(VERSION,'version'))
     row.addStretch()
     w.tools_menu = QMenu('Tüm araçlar', w)
     all_tools = QToolButton()
@@ -323,7 +264,7 @@ def build_home(w):
     for width in (90,72,90,82):
         line = QFrame()
         line.setFixedSize(width,5)
-        line.setStyleSheet('background:#e5ecea;border-radius:2px;')
+        line.setObjectName('paperLine')
         papercol.addWidget(line)
     papercol.addStretch()
     papercol.addWidget(label('STÜDYO','heroSmall'))

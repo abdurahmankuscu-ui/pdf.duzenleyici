@@ -132,3 +132,31 @@ Metni değiştir penceresinde **Yazı alanı — genişlik / yükseklik** ayarla
 ## Taşıma kılavuzları — 2.3
 
 **Metni taşı** ile yazıyı seçip kutunun içinden sürüklediğinizde yatay ve dikey kılavuzlar görünür. Sayfa merkezi, kenarları ve diğer metinlerin kenar/merkez hizaları referans alınır. Yakın hizalar turkuaz çizgiyle belirtilir; otomatik yapıştırma yapılmaz. Çizgiler yalnızca ekranda görünür, PDF’ye kaydedilmez. Esc taşıma hareketini iptal eder. Yeni paket: `dist/v2.3/PDF Studyo/PDF Studyo.exe`.
+
+## Sürüm 2.4 — yeni özellikler
+
+Yeni paket: `dist/v2.4/PDF Studyo/PDF Studyo.exe` (`build.ps1` ile oluşturulur). Sürüm numarası tek yerde, `version.py` içinde tutulur.
+
+**Güvenlik** (Tüm araçlar > PDF güvenliği)
+- **Hassas verileri bul ve karart:** TCKN ve IBAN (kontrol basamağı doğrulanır), e-posta ve cep telefonu numaraları bulunur. Bulgular listelenir; işaretini kaldırdıklarınız korunur. Taranmış belgelerde önce OCR uygulayın.
+- **Dijital imza (sertifikalı):** Sayfada imza alanını çizin, `.pfx/.p12` sertifikanızı ve parolasını girin. PAdES imzası **yeni bir dosyaya** yazılır. Sertifika parolası saklanmaz. Parolalı belgeler parolasıyla birlikte imzalanır.
+- **İmzaları doğrula:** Bütünlük, imza kapsamı ve imzalayan bilgisi gösterilir. Sertifika güveni Windows kök sertifikalarıyla, çevrimdışı denetlenir; iptal (CRL/OCSP) denetimi yapılmaz.
+- İmzalı bir belgeyi normal kaydetmek imzaları geçersiz kılar; uygulama kaydetmeden önce uyarır.
+
+**Düzenleme**
+- Soldaki araçlara **Serbest çizim, Çizgi, Ok, Daire** ve **Bağlantı ekle** eklendi. Bağlantılar yalnızca `https://`, `http://`, `mailto:` veya sayfa numarası olabilir; program çalıştıran veya yerel dosya açan bağlantılar reddedilir.
+- **Yorumlar** düğmesi yorum panelini açar: sayfaya git, düzenle, sil.
+- **Yer imleri** (Sayfa araçları): başlık, düzey ve sayfa düzenlenir.
+- **Form alanları:** metin, onay kutusu, açılır liste, liste, radyo düğmesi; tüm türler doldurulabilir. **Formu düzleştir** alanları sabit içeriğe çevirir.
+- **Sayfa listesi:** sürükle-bırak ile sıralama; Ctrl/Shift ile çoklu seçip döndürme, silme ve ayıklama.
+
+**İş akışı**
+- **Üstbilgi / altbilgi / Bates** (Sayfa araçları): `{n}`, `{toplam}`, `{bates}`, `{tarih}` alanları; 6 konum; sayfa aralığı. Döndürülmüş sayfalarda da yazı okuyucuya düz görünür.
+- **Toplu işlem (klasör):** Birden çok PDF'e küçültme, OCR, filigran veya damga uygulanır. Özgün dosyalar değişmez; sonuçlar ayrı klasöre yazılır, aynı adlı dosyaların üzerine yazılmaz. Parolalı dosyalar atlanır ve raporda belirtilir.
+- **Son açılanlar:** `•••` menüsünde.
+- **Otomatik kurtarma:** Kaydedilmemiş değişiklikler 2 dakikada bir `%LOCALAPPDATA%\PDFStudyo\recovery` klasörüne yazılır. Beklenmedik kapanıştan sonra açılışta geri yükleme önerilir. Parolalı belgelerin kurtarma kopyası aynı parolayla şifrelenir; parola diske yazılmaz.
+
+**Dağıtım**
+- **Görünüm > Tema:** Sistem, Açık, Koyu. Seçim hatırlanır.
+- **Yardım > Güncellemeleri denetle:** Yalnızca siz seçtiğinizde, GitHub'daki [proje sürümlerini](https://github.com/abdurahmankuscu-ui/pdf.duzenleyici/releases) denetler. Hiçbir dosyayı kendisi indirmez veya çalıştırmaz; yalnızca bu projenin sürüm sayfasını tarayıcıda açar. Denetimin çalışması için GitHub'da `v2.4` gibi etiketli bir Release yayınlanmalıdır.
+- **Kurulum paketi:** `installer.iss` (Inno Setup 6). Inno Setup kuruluysa `build.ps1` betiği `dist/installer/PDF-Studyo-<sürüm>-Kurulum.exe` dosyasını da üretir. Kurulum yönetici izni istemez, kullanıcı klasörüne kurar. İsteğe bağlı olarak PDF'ler için "Birlikte aç" kaydı ekler; varsayılan PDF uygulamanızı değiştirmez.

@@ -351,13 +351,20 @@ class ToolsMixin:
             painter.end()
 
     def about(self):
-        self.result_text('PDF Stüdyo — Özellikler', '''PDF STÜDYO 0.1 · Windows masaüstü
+        from version import VERSION
+        self.result_text('PDF Stüdyo — Özellikler', f'''PDF STÜDYO {VERSION} · Windows masaüstü
 
 Yerel: metin/resim ekleme, alan silme, metin değiştirme, not, vurgulama, şekil,
 birleştirme, ayırma, sayfa silme/taşıma/döndürme/kırpma, numara, filigran,
 form metin alanı oluşturma/doldurma, görsel imza, AES-256 parola, bilinen parolayla
 kilit açma, metin/görsel karşılaştırma, kayıpsız küçültme, yapısal onarım,
 JPG/PNG ↔ PDF, temel HTML → PDF, PDF → Word/Excel/PowerPoint/Markdown, yazdırma.
+
+2.4 ile: hassas veri bulup karartma, sertifikalı dijital imza ve imza doğrulama,
+serbest çizim/çizgi/ok/daire, yorum paneli, yer imleri, güvenli bağlantılar,
+onay kutusu/liste/radyo form alanları ve düzleştirme, sayfa sürükle-bırak ve
+çoklu seçim, üstbilgi/altbilgi/Bates, toplu işlem, son açılanlar, otomatik
+kurtarma, koyu tema, güncelleme denetimi.
 
 OCR: Tesseract dil verileri gerekir. Çıktı 200 DPI görüntü ve aranabilir metin içerir.
 Office → PDF: Etkin Microsoft Word/Excel/PowerPoint masaüstü sürümü gerekir.

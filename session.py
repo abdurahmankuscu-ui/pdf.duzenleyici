@@ -28,6 +28,14 @@ class Session:
         temporary.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding='utf-8')
         os.replace(temporary, self.folder / 'preferences.json')
 
+    def preference(self, key, default=None):
+        return self._preferences().get(key, default)
+
+    def set_preference(self, key, value):
+        data = self._preferences()
+        data[key] = value
+        self._write_preferences(data)
+
     def recent(self):
         entries = self._preferences().get('recent', [])
         return [p for p in entries if isinstance(p, str) and Path(p).is_file()][:MAX_RECENT]

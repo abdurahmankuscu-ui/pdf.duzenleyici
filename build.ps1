@@ -1,6 +1,9 @@
-param([string]$OutputDirectory = 'dist/v2.3')
+param([string]$OutputDirectory = '')
 $ErrorActionPreference = 'Stop'
 Set-Location $PSScriptRoot
+# version.py is the single source of the version number.
+$version = (& .\.venv\Scripts\python.exe -c "from version import VERSION; print(VERSION)").Trim()
+if (-not $OutputDirectory) { $OutputDirectory = "dist/v$version" }
 $outputRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot $OutputDirectory))
 $packageDirectory = [System.IO.Path]::GetFullPath((Join-Path $outputRoot 'PDF Studyo'))
 $expectedDist = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot 'dist')) + [System.IO.Path]::DirectorySeparatorChar
@@ -20,4 +23,13 @@ Copy-Item '.venv/Lib/site-packages/PySide6/*140*.dll' -Destination $packageRoot 
 Copy-Item -LiteralPath 'README.md' -Destination (Join-Path $packageDirectory 'KULLANIM.md') -Force
 if (Test-Path -LiteralPath 'ENTEGRASYON_DURUMU.md') {
     Copy-Item -LiteralPath 'ENTEGRASYON_DURUMU.md' -Destination (Join-Path $packageDirectory 'ENTEGRASYON_DURUMU.md') -Force
+}
+# Optional installer: needs Inno Setup 6 (https://jrsoftware.org/isinfo.php).
+$iscc = @("${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe", "$env:ProgramFiles\Inno Setup 6\ISCC.exe", "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe") |
+    Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
+if ($iscc) {
+    & $iscc "/DSourceDir=$packageDirectory" "/DAppVersion=$version" 'installer.iss'
+    if ($LASTEXITCODE -ne 0) { throw 'Kurulum paketi oluşturulamadı.' }
+} else {
+    Write-Host 'Inno Setup 6 bulunamadı; kurulum paketi atlandı (taşınabilir paket hazır).'
 }
