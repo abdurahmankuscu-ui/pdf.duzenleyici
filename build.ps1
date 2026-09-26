@@ -1,4 +1,4 @@
-param([string]$OutputDirectory = '')
+﻿param([string]$OutputDirectory = '')
 $ErrorActionPreference = 'Stop'
 Set-Location $PSScriptRoot
 # version.py is the single source of the version number.

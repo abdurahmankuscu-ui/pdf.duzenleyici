@@ -1,6 +1,6 @@
 import sys
 from pathlib import Path
-if '--smoke-test' in sys.argv or '--verify-integrations' in sys.argv or '--verify-text' in sys.argv:
+if any(flag in sys.argv for flag in ('--smoke-test', '--verify-integrations', '--verify-text', '--verify-features')):
     import traceback
     def smoke_exception(exc_type, exc_value, exc_traceback):
         Path('smoke-error.log').write_text(''.join(traceback.format_exception(exc_type, exc_value, exc_traceback)), encoding='utf-8')
@@ -605,6 +605,10 @@ class Window(SecurityMixin, EditingMixin, WorkflowMixin, ToolsMixin, QMainWindow
 
 
 if __name__ == '__main__':
+    if '--verify-features' in sys.argv:
+        from verification import verify_features
+        results = verify_features(sys.argv[2])
+        sys.exit(0 if all(r.get('ok') for r in results.values()) else 1)
     if '--verify-integrations' in sys.argv:
         from verification import verify_package
         results = verify_package(sys.argv[2])

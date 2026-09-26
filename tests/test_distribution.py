@@ -103,3 +103,11 @@ def test_installer_script_matches_version():
     script = (Path(__file__).resolve().parents[1] / 'installer.iss').read_text(encoding='utf-8')
     assert f'#define AppVersion "{VERSION}"' in script
     assert 'PrivilegesRequired=lowest' in script
+
+
+def test_packaged_feature_check_exercises_new_modules(tmp_path):
+    from verification import verify_features
+    results = verify_features(tmp_path)
+    assert set(results) == {'signing', 'redaction', 'stamping', 'forms', 'theme', 'updater'}
+    assert all(r.get('ok') for r in results.values()), results
+    assert (tmp_path / 'features.json').exists()
