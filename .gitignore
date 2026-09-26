@@ -7,3 +7,12 @@ dist/
 tmp/
 *.lnk
 *.log
+# Sertifika, anahtar ve gizli bilgi dosyaları asla depoya girmesin
+*.pfx
+*.p12
+*.pem
+*.key
+*.crt
+*.cer
+.env
+.env.*
