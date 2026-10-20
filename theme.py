@@ -34,6 +34,8 @@ QListWidget::item { padding:14px 6px; margin:4px 0; border:1px solid transparent
 QListWidget::item:selected { background:{selected}; border:1px solid {selected_border}; color:{selected_text}; }
 QListWidget::item:hover { background:{hover}; }
 QGraphicsView { background:{canvas}; border:0; }
+QSplitter::handle { background:{border}; }
+QSplitter::handle:hover { background:{selected_border}; }
 QLineEdit, QSpinBox, QDoubleSpinBox, QTextEdit, QComboBox, QTableWidget { background:{surface}; border:1px solid {control_border}; border-radius:7px; padding:7px; selection-background-color:{selection}; selection-color:{selection_text}; }
 QLineEdit:focus, QTextEdit:focus { border-color:{focus}; }
 QSpinBox, QDoubleSpinBox { padding-right:8px; }

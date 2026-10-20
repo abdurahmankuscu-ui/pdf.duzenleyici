@@ -5,7 +5,7 @@ from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtWidgets import (QWidget, QFrame, QLabel, QVBoxLayout, QHBoxLayout,
     QGridLayout, QPushButton, QToolButton, QMenu, QSpinBox, QLineEdit,
     QListWidget, QStackedWidget, QSizePolicy, QScrollArea, QGraphicsDropShadowEffect,
-    QAbstractSpinBox)
+    QAbstractSpinBox, QSplitter)
 
 
 PATHS = {
@@ -195,17 +195,24 @@ def build_workspace(w, Canvas):
     props.addWidget(w.zoom)
     props.addWidget(tool(w.action(root,'Genişliğe sığdır',w.fit_width),glyph='fit',text=False))
     edit_layout.addWidget(properties)
-    content, content_row = frame('content')
-    w.content_row = content_row
+    # A splitter lets the user drag the page panel wider for large previews.
+    content = QSplitter(Qt.Orientation.Horizontal)
+    content.setObjectName('content')
+    content.setChildrenCollapsible(False)
+    content.setHandleWidth(6)
+    content_row = content
+    w.content_row = w.content_splitter = content
     w.canvas = Canvas()
     w.canvas.selected.connect(w.edit_selection)
     w.canvas.moved.connect(w.move_selected_text)
-    content_row.addWidget(w.canvas,1)
+    content_row.addWidget(w.canvas)
     panel, panelcol = frame('pagePanel',True,(10,18,10,10),8)
-    panel.setFixedWidth(176)
+    panel.setMinimumWidth(150)
+    panel.setMaximumWidth(640)
+    w.pages_panel = panel
     panelcol.addWidget(label('SAYFALAR','panelHeading'))
     w.thumbs = QListWidget()
-    w.thumbs.setIconSize(QSize(104,144))
+    w.thumbs.setIconSize(QSize(156,221))
     w.thumbs.setViewMode(QListWidget.ViewMode.IconMode)
     w.thumbs.setFlow(QListWidget.Flow.TopToBottom)
     w.thumbs.setWrapping(False)
@@ -226,6 +233,8 @@ def build_workspace(w, Canvas):
     page_button.setSizePolicy(QSizePolicy.Policy.Expanding,QSizePolicy.Policy.Fixed)
     panelcol.addWidget(page_button)
     content_row.addWidget(panel)
+    content.setStretchFactor(0, 1)
+    content.setStretchFactor(1, 0)
     edit_layout.addWidget(content,1)
     w.workspace_stack.addWidget(editor)
     outer.addWidget(body,1)

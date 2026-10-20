@@ -20,6 +20,7 @@ from version import VERSION
 from security_ui import SecurityMixin
 from editing_ui import EditingMixin
 from workflow_ui import WorkflowMixin
+from thumbnails import ThumbnailMixin
 
 
 class Canvas(QGraphicsView):
@@ -168,7 +169,7 @@ class Canvas(QGraphicsView):
         super().keyPressEvent(event)
 
 
-class Window(SecurityMixin, EditingMixin, WorkflowMixin, ToolsMixin, QMainWindow):
+class Window(SecurityMixin, EditingMixin, WorkflowMixin, ThumbnailMixin, ToolsMixin, QMainWindow):
     def __init__(self):
         super().__init__()
         self.editor = Editor()
@@ -183,6 +184,7 @@ class Window(SecurityMixin, EditingMixin, WorkflowMixin, ToolsMixin, QMainWindow
         self.setup_tools()
         self.setup_editing()
         self.setup_workflow()
+        self.setup_thumbnails()
         self.refresh()
 
     def guarded(self, fn):
@@ -315,19 +317,7 @@ class Window(SecurityMixin, EditingMixin, WorkflowMixin, ToolsMixin, QMainWindow
         self.page = min(self.page, len(doc) - 1)
         self.info.setText(f'   {title}   /   {len(doc)} sayfa')
         if thumbs:
-            self.thumbs.blockSignals(True)
-            self.thumbs.clear()
-            for i in range(len(doc)):
-                item = QListWidgetItem(f'Sayfa {i+1}')
-                # Original index lets drag-and-drop compute the new page order.
-                item.setData(Qt.ItemDataRole.UserRole, i)
-                # Avoid rendering the entire document eagerly.
-                if abs(i - self.page) < 12:
-                    pix = doc[i].get_pixmap(matrix=fitz.Matrix(0.18, 0.18), alpha=False)
-                    item.setIcon(QIcon(self.pixmap(pix)))
-                self.thumbs.addItem(item)
-            self.thumbs.setCurrentRow(self.page)
-            self.thumbs.blockSignals(False)
+            self.populate_thumbnails()
         self.render()
         self.refresh_comments()
 
